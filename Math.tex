@@ -1,0 +1,286 @@
+% Math.tex
+\chapter{Math}
+ \section{High Precision Class}
+  \begin{lstlisting}[language=C++]
+const int maxn = 200;
+struct bign{
+  int len, s[maxn];
+  bign() {
+    memset(s, 0, sizeof(s));
+    len = 1;
+  }
+  bign(int num) {
+    *this = num;
+  }
+  bign(const char* num) {
+    *this = num;
+  }
+  bign operator = (int num) {
+    char s[maxn];
+    sprintf(s, "%d", num);
+    *this = s;
+    return *this;
+  }
+  bign operator = (const char* num) {
+    len = strlen(num);
+    for(int i = 0; i < len; i++) s[i] = num[len-i-1] - '0';
+    return *this;
+  }
+  string str() const {
+    string res = "";
+    for(int i = 0; i < len; i++) res = (char)(s[i] + '0') + res;
+    if(res == "") res = "0";
+    return res;
+  }
+  bign operator + (const bign& b) const{
+    bign c;
+    c.len = 0;
+    for(int i = 0, g = 0; g || i < max(len, b.len); i++) {
+      int x = g;
+      if(i < len) x += s[i];
+      if(i < b.len) x += b.s[i];
+      c.s[c.len++] = x % 10;
+      g = x / 10;
+    }
+    return c;
+  }
+  void clean() {
+    while(len > 1 && !s[len-1]) len--;
+  }
+  bign operator * (const bign& b) {
+    bign c; c.len = len + b.len;
+    for(int i = 0; i < len; i++)
+      for(int j = 0; j < b.len; j++)
+        c.s[i+j] += s[i] * b.s[j];
+    for(int i = 0; i < c.len-1; i++){
+      c.s[i+1] += c.s[i] / 10;
+      c.s[i] %= 10;
+    }
+    c.clean();
+    return c;
+  }
+  bign operator - (const bign& b) {
+    bign c; c.len = 0;
+    for(int i = 0, g = 0; i < len; i++) {
+      int x = s[i] - g;
+      if(i < b.len) x -= b.s[i];
+      if(x >= 0) g = 0;
+      else {
+        g = 1;
+        x += 10;
+      }
+      c.s[c.len++] = x;
+    }
+    c.clean();
+    return c;
+  }
+  bool operator < (const bign& b) const{
+    if(len != b.len) return len < b.len;
+    for(int i = len-1; i >= 0; i--)
+      if(s[i] != b.s[i]) return s[i] < b.s[i];
+    return false;
+  }
+  bool operator > (const bign& b) const{
+    return b < *this;
+  }
+  bool operator <= (const bign& b) {
+    return !(b > *this);
+  }
+  bool operator == (const bign& b) {
+    return !(b < *this) && !(*this < b);
+  }
+  bign operator += (const bign& b) {
+    *this = *this + b;
+    return *this;
+  }
+};
+istream& operator >> (istream &in, bign& x) {
+  string s;
+  in >> s;
+  x = s.c_str();
+  return in;
+}
+ostream& operator << (ostream &out, const bign& x) {
+  out << x.str();
+  return out;
+}
+  \end{lstlisting}
+
+ \section{Number Theory}
+  \subsection{Sieve of Eratosthenes}
+  \begin{lstlisting}[language=C++]
+const int maxn=10000010;
+const int maxp=700000;
+int vis[maxn],prime[maxp];
+void sieve(int n)	//sieve the primes no larger than n
+{
+	int m=(int)sqrt(n+0..5);
+	memset(vis,0,sizeof(vis));
+	for(int i=2;i<=m;i++) if(!vis[i])
+		for(int j=i*i;j<=n;j+=i) vis[j]=1;
+	int c=0;
+	for(int i=2;i<=n;i++) if(!vis[i])
+		prime[c++]=i;
+}
+  \end{lstlisting}
+  \subsection{Sieve of Euler}
+\textbf{The Sieve can be used to solve problem of multiplicative function.\\
+Test: CF 10C}
+  \begin{lstlisting}[language=C++]
+int vis[maxn],prime[maxp];
+void sieve(int n)
+{
+	int tot=0;
+	for(int i=2;i<=n;i++)
+	{
+		if(!vis[i]) prime[tot++]=i;
+		for(int j=0;j<tot;j++)
+		{
+			if(i*prime[j]>n) break;
+			vis[i*prime[j]]=1;
+			if(i%prime[j]==0) break;
+		}
+}
+  \end{lstlisting}
+  \subsection{Euclid Algorithm}
+  \begin{lstlisting}[language=C++]
+typedef long long LL;
+LL gcd(LL a,LL b)
+{
+	return b==0?a:gcd(b,a%b);
+}
+void exgcd(LL a,LL b,LL& d,LL& x,LL& y)
+{
+	if(!b){d=a;x=1;y=0;}
+	else
+	{
+		gcd(b,a%b,d,y,x);
+		y-=x*(a/b);
+	}
+}
+  \end{lstlisting}
+  \subsection{Euler Function}
+  \begin{lstlisting}[language=C++]
+int euler_phi(int n)
+{
+	int m=(int)sqrt(n+0.5);
+	int ans=n;
+	for(int i=2;i<=m;i++) if(n%i==0)
+	{
+		ans=ans/i*(i-1);
+		while(n%i==0) n/=i;
+	}
+	if(n>1) ans=ans/n*(n-1);
+}
+int phi[maxn];
+void phi_table(int n)
+{
+	for(int i=2;i<=n;i++) phi[i]=0;
+	phi[1]=1;
+	for(int i=2;i<=n;i++) if(!phi[i])
+	{
+		for(int j=i;j<=n;j+=i)
+		{
+			if(!phi[j]) phi[j]=j;
+			phi[j]=phi[j]/i*(i-1);
+		}
+	}
+}
+  \end{lstlisting}
+  \subsection{Calculate the Inversion}
+  \begin{lstlisting}[language=C++]
+LL inv(LL a, LL n)
+{
+	LL d,x,y;
+	exgcd(a,n,d,x,y);
+	return d==1?(x+n)%n:-1;
+}
+  \end{lstlisting}
+  \subsection{Chinese Remainder Theorem}
+  \begin{lstlisting}[language=C++]
+//n equations:x=a[i](mod m[i]) (0<=i<n)
+LL china(int n,int *a,int *m)
+{
+	LL M=1,d,y,x=0;
+	for(int i=0;i<n;i++) M*=m[i];
+	for(int i=0;i<n;i++)
+	{
+		LL w=M/m[i];
+		exgcd(m[i],w,d,d,y);
+		x=(x+y*w*a[i])%M;
+	}
+	return (x+M)%M;
+}
+  \end{lstlisting}
+  \subsection{Bezout Theorem}
+For any two integers $a$,$b$, assume that $d$ is their gcd. The equation $ax+by=m$ has integer solutions $(x,y)$ if and only if m is the multiple of d. When the equation has solutions, the set of solutions are $\{(\frac{mx_0+kb}{d},\frac{my_0-ka}{d})|k \in \mathbb{Z} \}$, where $(x_0,y_0)$ is one solution of this equation. 
+ \section{Combinatorics}
+  \subsection{Calculate Combinations by Recurrence}
+  \begin{lstlisting}[language=C++]
+void init()
+{
+    memset(C,0,sizeof(C));
+    C[0][0]=1;
+    for(int i=1;i<n;i++)
+    {
+        C[i][0]=C[i][i]=0;
+        for(int j=1;j<i;j++)
+            C[i][j]=C[i-1][j]+C[i-1][j-1];
+    }
+}
+  \end{lstlisting}
+ \section{Matrix and System of Linear Equations}
+  \subsection{Matrix Fast Power}
+  \begin{lstlisting}[language=C++]
+typedef matrix int[maxn][maxn];
+void mat_mul(matrix A,matrix B,matrix res)
+{
+    matrix C;
+    memset(C,0,sizeof(C));
+    for(int i=0;i<n;i++)
+        for(int j=0;j<n;j++)
+            for(int k=0;k<n;k++)
+                C[i][j]+=A[i][k]*B[k][j];
+    memcpy(res,C,sizeof(C));
+}
+void mat_pow(matrix A,int m,matrix res)
+{
+    matrix a,r;
+    memcpy(a,A,sizeof(a));
+    memset(r,0,sizeof(r));
+    for(int i=0;i<n;i++) r[i][i]=1;
+    while(m)
+    {
+        if(m&1) mat_mul(r,a,r);
+        m>>=1;
+        mat_mul(a,a,a);
+    }
+    memcpy(res,r,sizeof(r));
+}
+  \end{lstlisting}
+ \section{Numerical Method}
+  \subsection{Adaptive Simpson's Rule}
+  \begin{lstlisting}[language=C++]
+//F is a global function
+double simpson(double a,double b)
+{
+	double c=a+(b-a)/2;
+	return (F(a)+4*F(c)+F(b))*(b-a)/6;
+}
+//recursive part
+double asr(double a,double b,double eps,double A)
+{
+	double c=a+(b-a)/2;
+	double L=simpson(a,c),R=simpson(c,b);
+	if(fabs(L+R-A)<=15*eps) return L+R+(L+R-A)/15.0;
+	return asr(a,c,eps/2,L)+asr(c,b,eps/2,R);
+}
+//main part
+double asr(double a,double b,double eps)
+{
+	return asr(a,b,eps,simpson(a,b));
+}
+  \end{lstlisting}
+
+
+\endinput

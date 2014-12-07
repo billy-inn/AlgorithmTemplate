@@ -1,0 +1,360 @@
+% Data_Structures.tex
+\chapter{Data Structures}
+ \section{Fenwick Tree}
+  \textbf{Test: CF 383C}
+  \subsection{unidimension}
+  \begin{lstlisting}[language=C++]
+int C[maxn];
+int lowbit(int x){return x&-x;}
+void add(int x,int v) 
+{
+    while(x<=n)
+    {
+        C[x]+=v;x+=lowbit(x);
+    }
+}
+int getsum(int x)
+{
+    int ans=0;
+    while(x>0)
+    {
+        ans+=C[x];x-=lowbit(x);
+    }
+    return ans;
+}
+  \end{lstlisting}
+  \subsection{two-dimension}
+  \begin{lstlisting}[language=C++]
+int C[maxn][maxn];
+int n,m;
+int lowbit(int x){return x&-x;}
+void add(int x,int y,int v)
+{
+    for(int i=x;i<=n;i+=lowbit(i))
+        for(int j=y;j<=m;j+=lowbit(j))
+        {
+            C[i][j]+=v;
+        }
+}
+int getsum(int x,int y) 
+{
+    int ans=0;
+    for(int i=x;i>0;i-=lowbit(i))
+        for(int j=y;j>0;j-=lowbit(j))
+        {
+            ans+=C[i][j];
+        }
+    return ans;
+}
+  \end{lstlisting}
+
+ \section{RMQ}
+ \textbf{Test: CF 6E}
+ \begin{lstlisting}[language=C++]
+int d[maxn][power];
+void RMQ_init(int* A,int n)
+{
+	for(int i=0;i<n;i++) d[i][0]=A[i];
+	for(int j=1;(1<<j)<=n;j++)
+		for(int i=0;i+(1<<j)-1<n;i++)
+			d[i][j]=min(d[i][j-1],d[i+(1<<(j-1))][j-1]);
+
+}
+int RMQ(int L,int R)
+{
+	int k=0;
+	while((1<<(k+1))<=R-L+1) k++;
+	return min(d[L][k],d[R-(1<<k)+1][k]);
+}
+ \end{lstlisting}
+
+ \section{Splay Tree}
+  \subsection{Implemented by List}
+  \textbf{Test: hdu1754,1890,3436,3487,poj3468,UVa11922}
+  \begin{lstlisting}[language=C++]
+const int maxn=200010;
+struct Node
+{
+    Node *ch[2];    //children
+    Node *pre;      //ancestor
+    int sz;         //the number of nodes that are rooted in this node
+    int val;        //the value to be maintained
+    inline void push_up()       //like the function of segment tree
+    {
+        sz=1+ch[0]->sz+ch[1]->sz;
+    }
+    inline void push_down()     //like the function of segment tree
+};
+Node *null=new Node();          //virtual node
+struct SplaySequence
+{
+    Node seq[maxn];
+    Node *root;
+    int a[maxn];
+    Node* build(int l,int r,Node *f)
+    {
+        if(l>r) return null;
+        int m=(l+r)>>1;
+        Node *o=&seq[m];
+        o->pre=f;
+        o->val=a[m];
+        o->ch[0]=build(l,m-1,o);
+        o->ch[1]=build(m+1,r,o);
+        o->push_up();
+        return o;
+    }
+    void init(int sz)
+    {
+        null->sz=0;
+        root=build(1,sz,null);
+    }
+    //d=0 rotate toward the left、d=1 rotate toward the right
+    inline void rotate(Node *x,int d)
+    {
+        Node *y=x->pre;
+        y->push_down();
+        x->push_down();
+        y->ch[d^1]=x->ch[d];
+        if(x->ch[d]!=null) x->ch[d]->pre=y;
+        x->pre=y->pre;
+        if(y->pre!=null) y->pre->ch[y->pre->ch[1]==y]=x;
+        x->ch[d]=y;
+        y->pre=x;
+        y->push_up();
+        if(y==root) root=x;
+    }
+    //rotate x to the position below f and return x
+    inline Node* splay(Node *x,Node *f)
+    {
+        while(x->pre!=f)
+        {
+            if(x->pre->pre==f) rotate(x,x->pre->ch[0]==x);
+            else
+            {
+                Node *y=x->pre,*z=y->pre;
+                int d=(z->ch[0]==y);
+                if(y->ch[d]==x) rotate(x,d^1),rotate(x,d);
+                else rotate(y,d),rotate(x,d);
+            }
+        }
+        x->push_up();
+        return x;
+    }
+    //rotate the node that is rooted in r 
+    //and ranks k to the position below f, and return it
+    inline Node* select(int k,Node *f,Node *r)
+    {
+        Node *t=r;
+        while(1)
+        {
+            int s=t->r-t->l+1;
+            int tmp=t->ch[0]->sz;
+            if(k<=tmp+s && k>tmp) break;
+            if(k<=tmp) t=t->ch[0];
+            else k-=tmp+s,t=t->ch[1];
+        }
+        return splay(t,f);
+    }
+    //split o to two trees
+    //the first k nodes are rooted in l, the other are rooted in r
+    inline void split(Node *o,int k,Node* &l,Node* &r)
+    {
+        l=select(k,null,o);
+        r=l->ch[1];
+        l->ch[1]=null;
+        r->pre=null;
+        l->push_up();
+    }
+    //merge l and r, and return the root
+    inline Node* merge(Node *l,Node *r)
+    {
+        Node *t=select(l->sz,null,l);
+        t->ch[1]=r;
+        r->pre=t;
+        t->push_up();
+        return t;
+    }
+} ss;
+void debug(Node *o)     //debug function
+{
+    if(o!=null)
+    {
+        debug(o->ch[0]);
+        printf("%d\n",o->val);
+        debug(o->ch[1]);
+    }
+}
+  \end{lstlisting}
+  \subsection{Implemented by array}
+  \textbf{Test: POJ 3468}
+  \begin{lstlisting}[language=C++]
+#include <cstdio>
+#define keyTree (ch[ ch[root][1] ][0])
+const int maxn = 222222;
+struct SplayTree{
+	int sz[maxn];
+	int ch[maxn][2];
+	int pre[maxn];
+	int root , top1 , top2;
+	int ss[maxn] , que[maxn];
+ 
+	inline void Rotate(int x,int f) {
+		int y = pre[x];
+		push_down(y);
+		push_down(x);
+		ch[y][!f] = ch[x][f];
+		pre[ ch[x][f] ] = y;
+		pre[x] = pre[y];
+		if(pre[x]) ch[ pre[y] ][ ch[pre[y]][1] == y ] = x;
+		ch[x][f] = y;
+		pre[y] = x;
+		push_up(y);
+	}
+	inline void Splay(int x,int goal) {
+		push_down(x);
+		while(pre[x] != goal) {
+			if(pre[pre[x]] == goal) {
+				Rotate(x , ch[pre[x]][0] == x);
+			} else {
+				int y = pre[x] , z = pre[y];
+				int f = (ch[z][0] == y);
+				if(ch[y][f] == x) {
+					Rotate(x , !f) , Rotate(x , f);
+				} else {
+					Rotate(y , f) , Rotate(x , f);
+				}
+			}
+		}
+		push_up(x);
+		if(goal == 0) root = x;
+	}
+	inline void RotateTo(int k,int goal) {
+		int x = root;
+		push_down(x);
+		while(sz[ ch[x][0] ] != k) {
+			if(k < sz[ ch[x][0] ]) {
+				x = ch[x][0];
+			} else {
+				k -= (sz[ ch[x][0] ] + 1);
+				x = ch[x][1];
+			}
+			push_down(x);
+		}
+		Splay(x,goal);
+	}
+	inline void erase(int x) {
+		int father = pre[x];
+		int head = 0 , tail = 0;
+		for (que[tail++] = x ; head < tail ; head ++) {
+			ss[top2 ++] = que[head];
+			if(ch[ que[head] ][0]) que[tail++] = ch[ que[head] ][0];
+			if(ch[ que[head] ][1]) que[tail++] = ch[ que[head] ][1];
+		}
+		ch[ father ][ ch[father][1] == x ] = 0;
+		pushup(father);
+	}
+//above usually  unchanged//////////////////////////////////////////////
+
+	inline void NewNode(int &x,int c) {
+		if (top2) x = ss[--top2];
+		else x = ++top1;
+		ch[x][0] = ch[x][1] = pre[x] = 0;
+		sz[x] = 1;
+ 
+		val[x] = sum[x] = c;/*specialized function*/
+		add[x] = 0;
+	}
+ 
+	inline void push_down(int x) {/*specialized function*/
+		if(add[x]) {
+			val[x] += add[x];
+			add[ ch[x][0] ] += add[x];
+			add[ ch[x][1] ] += add[x];
+			sum[ ch[x][0] ] += (long long)sz[ ch[x][0] ] * add[x];
+			sum[ ch[x][1] ] += (long long)sz[ ch[x][1] ] * add[x];
+			add[x] = 0;
+		}
+	}
+	inline void push_up(int x) {
+		sz[x] = 1 + sz[ ch[x][0] ] + sz[ ch[x][1] ];
+		/*specialized function*/
+		sum[x] = add[x] + val[x] + sum[ ch[x][0] ] + sum[ ch[x][1] ];
+	}
+ 
+	/*initialize*/
+	inline void makeTree(int &x,int l,int r,int f) {
+		if(l > r) return ;
+		int m = (l + r)>>1;
+		NewNode(x , num[m]);		/*varies according to the problem*/
+		makeTree(ch[x][0] , l , m - 1 , x);
+		makeTree(ch[x][1] , m + 1 , r , x);
+		pre[x] = f;
+		push_up(x);
+	}
+	inline void init(int n) {/*specialized funciton*/
+		ch[0][0] = ch[0][1] = pre[0] = sz[0] = 0;
+		add[0] = sum[0] = 0;
+ 
+		root = top1 = 0;
+		//for convience to add two nodes
+		NewNode(root , -1);
+		NewNode(ch[root][1] , -1);
+		pre[top1] = root;
+		sz[root] = 2;
+ 
+ 
+		for (int i = 0 ; i < n ; i ++) scanf("%d",&num[i]);
+		makeTree(keyTree , 0 , n-1 , ch[root][1]);
+		push_up(ch[root][1]);
+		push_up(root);
+	}
+	inline void update( ) {/*specialized funciton*/
+		int l , r , c;
+		scanf("%d%d%d",&l,&r,&c);
+		RotateTo(l-1,0);
+		RotateTo(r+1,root);
+		add[ keyTree ] += c;
+		sum[ keyTree ] += (long long)c * sz[ keyTree ];
+	}
+	inline void query() {/*specialized function*/
+		int l , r;
+		scanf("%d%d",&l,&r);
+		RotateTo(l-1 , 0);
+		RotateTo(r+1 , root);
+		printf("%lld\n",sum[keyTree]);
+	}
+ 
+	int num[maxn];
+	int val[maxn];
+	int add[maxn];
+	long long sum[maxn];
+}spt;
+ 
+ 
+int main() {
+	int n , m;
+	scanf("%d%d",&n,&m);
+	spt.init(n);
+	while(m --) {
+		char op[2];
+		scanf("%s",op);
+		if(op[0] == 'Q') {
+			spt.query();
+		} else {
+			spt.update();
+		}
+	}
+	return 0;
+}
+  \end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+\endinput

@@ -1,0 +1,305 @@
+% Geometry.tex
+\chapter{Geometry}
+ \section{Basic}
+
+\hspace{0.4cm} comparsion between real numbers
+  \begin{lstlisting}[language=C++]
+const double eps=1e-8;  
+int dcmp(double x)  
+{  
+    if(fabs(x)<eps) return 0;  
+    else return x<0?-1:1;  
+}
+  \end{lstlisting}
+
+definition of point and vector
+  \begin{lstlisting}[language=C++]
+struct point  
+{  
+    double x,y;  
+    point(double x=0,double y=0):x(x),y(y){}  
+};  
+point operator+(point a,point b){return point(a.x+b.x,a.y+b.y);}  
+point operator-(point a,point b){return point(a.x-b.x,a.y-b.y);}  
+point operator*(point a,double p){return point(a.x*p,a.y*p);}  
+point operator/(point a,double p){return point(a.x/p,a.y/p);}  
+bool operator <(const point& a,const point& b)  
+{  
+    return dcmp(a.x-b.x)<0 || (dcmp(a.x-b.x)==0&&dcmp(a.y-b.y)<0);  
+}  
+bool operator==(point a,point b)  
+{  
+    return dcmp(a.x-b.x)==0 && dcmp(a.y-b.y)==0;  
+}
+  \end{lstlisting}
+
+\newpage
+$ Dot(\vec u,\vec v) = \abs{\vec u} * \abs{\vec v} * cos<\vec u,\vec v>$
+  \begin{lstlisting}[language=C++]
+double dot(point a,point b){return a.x*b.x+a.y*b.y;}
+double length(point a){return sqrt(dot(a,a));}
+double angle(point a,point b){return acos(dot(a,b)/length(a)/length(b));}
+  \end{lstlisting}
+
+$Cross(\vec u,\vec v)$ is the twice of the directed area of the triangle formed by $\vec u$ \& $\vec v$
+  \begin{lstlisting}[language=C++]
+double cross(point a,point b){return a.x*b.y-a.y*b.x;}
+double area2(point a,point b,point c){return cross(b-a,c-a);}
+  \end{lstlisting}
+
+rotate the vector
+  \begin{lstlisting}[language=C++]
+point rotate(point a,double rad)  
+{  
+    return point(a.x*cos(rad)-a.y*sin(rad),a.x*sin(rad)+a.y*cos(rad));  
+}  
+  \end{lstlisting}
+
+calculate normal of the vector
+  \begin{lstlisting}[language=C++]
+point normal(point a)  
+{  
+    double L=length(a);  
+    return point(-a.y/L,a.x/L);  
+}  
+  \end{lstlisting}
+
+get intersection of two lines which are not parallel to each other
+  \begin{lstlisting}[language=C++]
+//p,q are points on two lines
+//v,w are direction vector of two lines
+point getlineinter(point p,point v,point q,point w)  
+{  
+    point u=p-q;  
+    double t=cross(w,u)/cross(v,w);  
+    return p+v*t;  
+}
+  \end{lstlisting}
+
+distance from point to line
+  \begin{lstlisting}[language=C++]
+double distoline(point p,point a,point b)  
+{  
+    point v1=b-a,v2=p-a;  
+    return fabs(cross(v1,v2))/length(v1);  
+}
+  \end{lstlisting}
+
+distance from point to segment
+  \begin{lstlisting}[language=C++]
+double distoseg(point p,point a,point b)  
+{  
+    if(a==b) return length(p-a);  
+    point v1=b-a,v2=p-a,v3=p-b;  
+    if(dcmp(dot(v1,v2))<0) return length(v2);  
+    else if(dcmp(dot(v1,v3))>0) return length(v3);  
+    else return fabs(cross(v1,v2))/length(v1);  
+}
+  \end{lstlisting}
+
+projection of point on line
+  \begin{lstlisting}[language=C++]
+point getpro(point p,point a,point b)  
+{  
+    point v=b-a;  
+    return a+v*(dot(v,p-a)/dot(v,v));  
+}
+  \end{lstlisting}
+
+judge whether two lines are properly intersected
+  \begin{lstlisting}[language=C++]
+bool segproperint(point a1,point a2,point b1,point b2)  
+{  
+    double c1=cross(a2-a1,b1-a1),c2=cross(a2-a1,b2-a1),  
+           c3=cross(b2-b1,a1-b1),c4=cross(b2-b1,a2-b1);  
+    return dcmp(c1)*dcmp(c2)<0 && dcmp(c3)*dcmp(c4)<0;  
+}
+  \end{lstlisting}
+
+judge whether point on segment, endpoints exclusive
+  \begin{lstlisting}[language=C++]
+bool onseg(point p,point a1,point a2)  
+{  
+    return dcmp(cross(a1-p,a2-p))==0 && dcmp(dot(a1-p,a2-p))<0;  
+}
+  \end{lstlisting}
+
+directed area of polygon
+  \begin{lstlisting}[language=C++]
+double polyarea(point* p,int n)  
+{  
+    double area=0;  
+    for(int i=1;i<n-1;i++)  
+        area+=cross(p[i]-p[0],p[i+1]-p[0]);  
+    return area/2;  
+}  
+  \end{lstlisting}
+
+  \section{Problems About Circle and Sphere}
+   \subsection{Definition of circle}
+   \begin{lstlisting}[language=C++]
+struct circle
+{
+	point c;
+	double r;
+	circle(point c=point(0,0),double r=0):c(c),r(r){}
+	point getpoint(double a)
+	{
+		return point(c.x+cos(a)*r,c.y+sin(a)*r);
+	}
+};
+   \end{lstlisting}
+   \subsection{Calculate the intersection of line and circle}
+   \begin{lstlisting}[language=C++]
+\\return the number of intersections
+\\the intersections are stored in sol
+int getlinecircleinter(point p,point v,circle C,double& t1,
+					double& t2,vector<point>& sol)
+{
+	double a=v.x,b=p.x-C.c.x,c=v.y,d=p.y-C.c.y;
+	double e=a*a+c*c,f=2*(a*b+c*d),g=b*b+d*d-C.r*C.r;
+	double delta=f*f-4*e*g;
+	if(dcmp(delta)<0) return 0;
+	if(dcmp(delta)==0)
+	{
+		t1=t2=-f/(2*e);
+		sol.push_back(p+v*t1);
+		return 1;
+	}
+	t1=(-f-sqrt(delta))/(2*e);sol.push_back(p+v*t1);
+	t2=(-f+sqrt(delta))/(2*e);sol.push_back(p+v*t2);
+	return 2;
+}
+   \end{lstlisting}
+   \subsection{Calculate the intersection of circles}
+   \begin{lstlisting}[language=C++]
+double angle(point v){return atan2(v.y,v.x);}   \\calculate the polar angle
+
+\\return the number of intersections
+\\the intersections are stored in sol
+int getcircleinter(circle C1,circle C2,vector<point>& sol)
+{
+	double d=length(C1.c-C2.c);
+	if(dcmp(d)==0)
+	{
+		if(dcmp(C1.r-C2.r)==0) return -1;
+		return 0;
+	}
+	if(dcmp(C1.r+C2.r-d)<0) return 0;
+	if(dcmp(fabs(C1.r-C2.r)-d)>0) return 0;
+
+	double a=angle(C2.c-C1.c);
+	double da=acos((C1.r*C1.r+d*d-C2.r*C2.r)/(2*C1.r*d));
+	point p1=C1.getpoint(a-da),p2=C1.getpoint(a+da);
+	sol.push_back(p1);
+	if(p1==p2) return 1;
+	sol.push_back(p2);
+	return 2;
+}
+   \end{lstlisting}
+
+  \section{2D Algorithm}
+   \subsection{Judge whether point in polygon}
+   \begin{lstlisting}[language=C++]
+//p is the point,poly is the polygon
+int isinpoly(point p,vector<point>& poly)  
+{  
+    int wn=0;  
+    int n=poly.size();  
+    for(int i=0;i<n;i++)  
+    {  
+        if(onseg(p,poly[i],poly[(i+1)%n])) return -1;   //on the boarder 
+        int k=dcmp(cross(poly[(i+1)%n]-poly[i],p-poly[i]));  
+        int d1=dcmp(poly[i].y-p.y);  
+        int d2=dcmp(poly[(i+1)%n].y-p.y);  
+        if(k>0 && d1<=0 && d2>0) wn++;  
+        if(k<0 && d2<=0 && d1>0) wn--;  
+    }  
+    if(wn!=0) return 1;     //inside
+    return 0;               //outside
+}  
+   \end{lstlisting}
+
+  \section{3D Algorithm}
+
+  \section{Stimulated Annealing Algorithm}
+   \subsection{Minimum Sphere Coverage}
+   \textbf{Test:UVa 10095}
+   \begin{lstlisting}[language=C++]
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+using namespace std;
+const double eps=1e-8;
+const double inf=1e20;
+const int maxn=10010;
+int dcmp(double x)
+{
+    if(fabs(x)<0) return 0;
+    else return x<0?-1:1;
+}
+struct point
+{
+    double x,y,z;
+} p[maxn];
+double length(point a,point b)
+{
+    double dx=a.x-b.x;
+    double dy=a.y-b.y;
+    double dz=a.z-b.z;
+    return sqrt(dx*dx+dy*dy+dz*dz);
+}
+int max_dis(int n,point q)
+{
+    int j;
+    double res=0;
+    for(int i=0;i<n;i++)
+    {
+        double tmp=length(q,p[i]);
+        if(dcmp(tmp-res)>0)
+        {
+            res=tmp;
+            j=i;
+        }
+    }
+    return j;
+}
+int main()
+{
+    int n;
+    while(scanf("%d",&n)&&n)
+    {
+        for(int i=0;i<n;i++) scanf("%lf%lf%lf",&p[i].x,&p[i].y,&p[i].z);
+        if(n==1) printf("0.0000 %.4f %.4f %.4f\n",p[0].x,p[0].y,p[0].z);
+        else
+        {
+            double r=inf;
+            double step=100000;     //maximal coordinate range
+            point q;
+            q.x=q.y=q.z=0;          //select a node randomly
+            while(step>eps)
+            {
+                int j=max_dis(n,q);
+                double tmp=length(p[j],q);
+                if(dcmp(r-tmp)>0) r=tmp;
+                double dx=(p[j].x-q.x)/tmp;
+                double dy=(p[j].y-q.y)/tmp;
+                double dz=(p[j].z-q.z)/tmp;
+                q.x+=dx*step;
+                q.y+=dy*step;
+                q.z+=dz*step;
+                step*=0.993;        //decided by precision,better no less than 0.99
+            }
+            printf("%.4f %.4f %.4f %.4f\n",r,q.x,q.y,q.z);
+        }
+    }
+    return 0;
+}
+   \end{lstlisting}
+
+
+
+
+
+\endinput

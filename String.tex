@@ -1,0 +1,356 @@
+% String.tex
+\chapter{String}
+ \section{KMP}
+ \begin{lstlisting}[language=C++]
+//fail function
+int f[maxn];
+void getfail(char* P)
+{
+    int m=strlen(P);
+    f[0]=0;f[1]=0;
+    for(int i=1;i<m;i++)
+    {
+        int j=f[i];
+        while(j && P[i]!=P[j]) j=f[j];
+        f[i+1]=P[i]==P[j]?j+1:0;
+    }
+}
+
+//find function
+void find(char* T,char* P)
+{
+    int n=strlen(T),m=strlen(P);
+    int j=0;
+    for(int i=0;i<n;i++)
+    {
+        while(j && P[j]!=T[i]) j=f[j];
+        if(P[j]==T[i]) j++;
+        if(j==m)
+        {
+            operate();
+            j=f[j];     //note when find a match, remember to get backward along fail edge once
+        }
+    }
+}
+ \end{lstlisting}
+
+ \section{AC Automation}
+ \begin{lstlisting}[language=C++]
+//tire tree
+const int maxn=100010;//maximal node number
+const int sigma=26;   
+//the size of character size,the value of characters are 0~sigma-1
+int ch[maxn][sigma];  //ch[i][j] means the node going from i along j to
+int val[maxn];        //additive information
+int sz;               //the total number of node
+void init()           //initial
+{
+    sz=1;
+    memset(ch[0],0,sizeof(ch[0]));
+}
+int idx(char c)       //index the character
+{
+    return c-'a';     //vary depending on specific condition
+}
+//insert string s,whose additive information is v
+//note that v cannot be 0
+void insert(char *s,int v)
+{
+    int u=0,n=strlen(s);
+    for(int i=0;i<n;i++)
+    {
+        int c=idx(s[i]);
+        if(!ch[u][c])
+        {
+            memset(ch[sz],0,sizeof(ch[sz]));
+            val[sz]=0;
+            ch[u][c]=sz++;
+        }
+        u=ch[u][c];
+    }
+    val[u]=v;
+    //val[u]|=(1<<v);
+    //operating like this when it comes to state compressing
+}
+
+//get fail function
+int f[maxn];            //fail function
+int last[maxn];         //suffix link
+void getfail()
+{
+    queue<int> q;
+    f[0]=0;
+    for(int c=0;c<sigma;c++)
+    {
+        int u=ch[0][c];
+        if(u) {f[u]=0;q.push(u);last[u]=0;}
+    }
+    while(!q.empty())
+    {
+        int r=q.front();q.pop();
+        for(int c=0;c<sigma;c++)
+        {
+            int u=ch[r][c];
+            if(!u)
+            {
+                //ch[r][c]=ch[f[r]][c];
+                //add all nonexist edges, applying on dp
+                continue;
+            }
+            q.push(u);
+            int v=f[r];
+            while(v && !ch[v][c]) v=f[v];//when all nonexist edges are added, code here can be deleted
+            f[u]=ch[v][c];
+            last[u]=val[f[u]]?f[u]:last[f[u]];
+        }
+    }
+}
+
+int find(char *T)
+{
+    int n=strlen(T);
+    int j=0;
+    for(int i=0;i<n;i++)
+    {
+        int c=idx(T[i]);
+        while(j && !ch[j][c]) j=f[j];   //when all nonexist edges are added, code here can be deleted
+        j=ch[j][c];
+        if(val[j]) process(j);
+        else if(last[j]) process(last[j]);
+    }
+}
+
+void process(int j)
+{
+    if(j)
+    {
+        operate();      //vary depending on specific condition
+        process(last[j]);
+    }
+}
+ \end{lstlisting}
+
+ \section{Suffix Array}
+ \begin{lstlisting}[language=C++]
+int s[maxn];                   //string to be constructed
+int sa[maxn];                  //suffix array
+int t[maxn],t2[maxn],c[maxn];
+//every character's value is 0-m-1,n is usually the length of string plus 1
+ void build_sa(int m,int n)           //construct suffix array
+{
+    int i,*x=t,*y=t2;
+    for(i=0;i<m;i++) c[i]=0;
+    for(i=0;i<n;i++) c[x[i]=s[i]]++;
+    for(i=1;i<m;i++) c[i]+=c[i-1];
+    for(i=n-1;i>=0;i--) sa[--c[x[i]]]=i;
+    for(int k=1;k<=n;k<<=1)
+    {
+        int p=0;
+        for(i=n-k;i<n;i++) y[p++]=i;
+        for(i=0;i<n;i++) if(sa[i]>=k) y[p++]=sa[i]-k;
+        for(i=0;i<m;i++) c[i]=0;
+        for(i=0;i<n;i++) c[x[y[i]]]++;
+        for(i=0;i<m;i++) c[i]+=c[i-1];
+        for(i=n-1;i>=0;i--) sa[--c[x[y[i]]]]=y[i];
+        swap(x,y);
+        p=1;x[sa[0]]=0;
+        for(i=1;i<n;i++)
+            x[sa[i]]=y[sa[i-1]]==y[sa[i]]&&y[sa[i-1]+k]==y[sa[i]+k]?p-1:p++;
+        if(p>=n) break;
+        m=p;
+    }
+}
+
+//calculate rank and height array
+int rank[maxn];         //suffix i's index in sa
+int height[maxn];       //the LCP of sa[i-1] and sa[i]
+void getheight(int n) //n is the length of string
+{
+    int i,j,k=0;
+    for(i=0;i<=n;i++) rank[sa[i]]=i;
+    for(i=0;i<n;i++)
+    {
+        if(k) k--;
+        int j=sa[rank[i]-1];
+        while(s[i+k]==s[j+k]) k++;
+        height[rank[i]]=k;
+    }
+}
+
+//RMQ
+int d[maxn][50];
+void RMQ_init(int n)
+{
+    for(int i=0;i<n;i++) d[i][0]=height[i];
+    for(int j=1;(1<<j)<=n;j++)
+        for(int i=0;i+(1<<j)-1<n;i++)
+            d[i][j]=min(d[i][j-1],d[i+(1<<(j-1))][j-1]);
+}
+int RMQ(int L,int R)
+{
+    if(L>R) swap(L,R);
+    if(L==R) return L-sa[L];
+    L++;
+    int k=0;
+    while((1<<(k+1))<=R-L+1) k++;
+    return min(d[L][k],d[R-(1<<k)+1][k]);
+}
+
+//inital
+build_sa(m,n+1);
+getheight(n);
+RMQ_init(n+1);
+ \end{lstlisting}
+
+ \section{Suffix Automation}
+ \begin{lstlisting}[language=C++]
+char s[maxn];               //string to be constructed
+int sz;                     //the number of node
+struct state
+{  
+    state *pre;
+    state *go[sigma];
+    int val;                //the length of the longest path
+    void clear()            //initialize node
+    {  
+        pre=0;val=0;  
+        memset(go,0,sizeof(go));  
+    }  
+};  
+state *root,*last;          //root node and last node added
+state st[maxn];  
+void init()                 //initialize SAM
+{  
+    sz=0;  
+    root=last=&st[sz++];  
+    root->clear();  
+}  
+void extend(int w)          //extend node
+{  
+    state *p=last;          //last node added
+    state *np=&st[sz++];    //create a new node
+    np->clear();
+    np->val=p->val+1;  
+    while(p && p->go[w]==0) //add edge to np when p->go[w]=0
+    {  
+        p->go[w]=np;  
+        p=p->pre;  
+    }  
+    if(p==0) np->pre=root;  //if w occurs first,add edge to the root
+    else  
+    {  
+        state *q=p->go[w];  
+        if(q->val==p->val+1)    //q is the proper state
+            np->pre=q;  
+        else  
+        {  
+            state *nq=&st[sz++];//create a new node and copy the information
+            nq->clear();  
+            nq->val=p->val+1;  
+            memcpy(nq->go,q->go,sizeof(q->go));  
+            nq->pre=q->pre;  
+            q->pre=nq;
+            np->pre=nq;  
+            while(p && p->go[w]==q)
+            {  
+                p->go[w]=nq;  
+                p=p->pre;  
+            }  
+        }  
+    }  
+    last=np;  
+}
+
+//sort the nodes
+int t[maxn];
+state *r[maxn];
+//l is the length of string,sz is the number of node
+//note here contains root node,root node is indexed as 1 in r
+for(int i=0;i<l;i++) t[i]=0;
+for(int i=0;i<sz;i++) t[st[i].val]++;
+for(int i=1;i<l;i++) t[i]+=t[i-1];
+for(int i=0;i<sz;i++) r[t[st[i].val]--]=&st[i];
+ \end{lstlisting}
+
+ \section{String Hash}
+ \begin{lstlisting}[language=C++]
+typedef unsigned long long ULL;
+const int maxn=10000;
+const int x=123;        //hash's parameter
+ULL H[maxn];            //the hash value of string
+ULL xp[maxn];           //x^n
+void hash_init(char *s) //initialize H(n),x^n
+{
+    int n=strlen(s);
+    H[n]=0;
+    for(int i=n-1;i>=0;i--) H[i]=H[i+1]*x+(s[i]-'a');   //calculate H(n)
+    xp[0]=1;
+    for(int i=1;i<=n;i++) xp[i]=xp[i-1]*x;              //calculate x^n
+}
+//hash function,return the hash value of string starts from i with length of L
+ULL hash(int i,int L)
+{
+    return H[i]-H[i+L]*xp[L];
+}
+ \end{lstlisting}
+
+ \section{Longest Palindromic Substring}
+ \textbf{Test:LeetCode, Longest Palindromic Substring}
+ \begin{lstlisting}[language=C++]
+int p[2010];
+void get(string str)
+{
+	int mx=0,id;
+	for(int i=1;i<str.size();i++)
+	{
+		if(mx>i) p[i]=min(p[2*id-i],mx-i);
+		else p[i]=1;
+		for(;str[i+p[i]]==str[i-p[i]];p[i]++)
+			;
+		if(p[i]+i>mx)
+		{
+			mx=p[i]+i;
+			id=i;
+		}
+	}
+}
+string longestPalindrome(string s) 
+{
+	string t="$";
+	for(int i=0;i<s.size();i++)
+		t+='#',t+=s[i];
+	t+='#';
+	get(t);
+	int ans=0,pos;
+	string str="";
+	for(int i=1;i<t.size();i++)
+		if(p[i]>ans)
+		{
+			ans=p[i];
+			pos=i;
+		}
+	for(int i=pos-ans+1;i<pos+ans;i++)
+		if(t[i]!='#') str+=t[i];
+	return str;
+}
+ \end{lstlisting}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\endinput
